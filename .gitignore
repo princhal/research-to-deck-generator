@@ -1,0 +1,8 @@
+node_modules/
+.next/
+.env
+generated/*.pptx
+__pycache__/
+*.pyc
+.venv/
+.claude/

@@ -1,0 +1,15 @@
+{
+  "note": "Placeholder brand — swap these values for the real deep-research.intelliforge.tech brand kit (logo, exact hex colors, licensed fonts) when available.",
+  "colors": {
+    "primary": "1B1F3B",
+    "accent": "5865F2",
+    "text": "1A1A1A",
+    "background": "FFFFFF",
+    "muted": "6B7280"
+  },
+  "fonts": {
+    "heading": "Arial",
+    "body": "Arial"
+  },
+  "logoPath": null
+}
