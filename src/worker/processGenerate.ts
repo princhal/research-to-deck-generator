@@ -1,5 +1,5 @@
 import type { Job } from "bullmq";
-import { searchPapers, fetchPaperText } from "../lib/semanticScholar";
+import { searchPapers, fetchPaperText } from "../lib/openAlex";
 import { chunkText } from "../lib/chunk";
 import { embedTexts } from "../lib/embeddings";
 import { upsertPaper, insertChunks, updateJobStatus } from "../lib/db";
@@ -18,7 +18,7 @@ export async function processGenerate(job: Job<GenerateJobData>): Promise<void> 
     await updateJobStatus(jobId, "ingesting");
     const papers = await searchPapers(topic, PAPERS_PER_TOPIC);
     if (papers.length === 0) {
-      throw new Error(`No papers found on Semantic Scholar for topic: "${topic}"`);
+      throw new Error(`No papers found on OpenAlex for topic: "${topic}"`);
     }
 
     const ingestedPaperIds: string[] = [];

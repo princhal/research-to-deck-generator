@@ -1,6 +1,6 @@
 # Research-to-Deck Generator
 
-RAG over academic papers (via the Semantic Scholar API) → synthesized findings → a branded, cited PPTX deck, triggered through a Next.js API and processed by a background worker.
+RAG over academic papers (via the OpenAlex API) → synthesized findings → a branded, cited PPTX deck, triggered through a Next.js API and processed by a background worker.
 
 ## Architecture
 
@@ -11,7 +11,7 @@ POST /api/generate {topic}
    BullMQ queue (Redis)
         │
         ▼
-   worker (src/worker) ── Semantic Scholar (search + PDF fetch)
+   worker (src/worker) ── OpenAlex (search + PDF fetch)
         │                       │
         │                       ▼
         │                 chunk + embed (Voyage AI) → pgvector
@@ -35,7 +35,7 @@ The worker (`src/worker/index.ts`) is a **separate long-running Node process**, 
 - BullMQ job enqueue — confirmed a real job lands in Redis (`bull:deck-generation:<jobId>`).
 - Postgres + pgvector schema — migrated and verified (`papers`, `chunks` with an `ivfflat` cosine index, `jobs`).
 - `scripts/generate_deck.py` — ran against sample data; produced a real 4-slide `.pptx` with title/content/notes/citations/sources slide, verified by reading the file back.
-- Semantic Scholar search — reaches the real API (confirmed via a live request); see the rate-limit note below.
+- OpenAlex search — reaches the real API (confirmed via a live request, including full field mapping: authors, venue, open-access PDF URL, reconstructed abstract). No rate-limit issues, no key required.
 - Full pipeline **has not** been run end-to-end with real `ANTHROPIC_API_KEY`/`VOYAGE_API_KEY`, since those require your credentials.
 
 ## Setup
@@ -56,11 +56,11 @@ npm run db:migrate
 | `ANTHROPIC_API_KEY` | console.anthropic.com | Used for query expansion and slide synthesis. |
 | `VOYAGE_API_KEY` | dash.voyageai.com | Used for embeddings (`voyage-3`) and reranking (`rerank-2`). Chosen because it's Anthropic's recommended embedding partner — swap `src/lib/embeddings.ts` if you'd rather use OpenAI or a local model. |
 
-### 3. Strongly recommended
+### 3. Optional
 
 | Env var | Why |
 |---|---|
-| `SEMANTIC_SCHOLAR_API_KEY` | The unauthenticated endpoint hit a `429 Too Many Requests` during testing from this sandbox in under 20 seconds. Pulling 50 papers per topic reliably will need a key — apply at semanticscholar.org/product/api. Code already sends it as `x-api-key` when set; works without one, just don't count on it. |
+| `OPENALEX_MAILTO` | Set to your email to join OpenAlex's "polite pool" (higher rate limits, priority support). Not required — the unauthenticated pool worked reliably during testing (no key, no 429s). *(Originally built against the Semantic Scholar API, but its unauthenticated tier hit a 429 in under 20 seconds from this sandbox and needed a key; switched to OpenAlex, which needs neither.)* |
 
 ### 4. Run it
 
@@ -93,7 +93,7 @@ None of this is provisioned yet — I didn't want to create paid external resour
 ```
 src/app/api/          Next.js route handlers
 src/lib/               shared modules: db, embeddings (Voyage), rag, synthesize (Claude),
-                        semanticScholar, chunk, deck (Python subprocess bridge), queue
+                        openAlex, chunk, deck (Python subprocess bridge), queue
 src/worker/             standalone BullMQ consumer + job orchestration
 scripts/generate_deck.py   python-pptx deck assembly (no network calls)
 db/schema.sql           Postgres + pgvector schema
