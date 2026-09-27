@@ -55,9 +55,9 @@ export async function processGenerate(job: Job<GenerateJobData>): Promise<void> 
 
     // 4. Assembly: python-pptx builds the branded deck.
     await updateJobStatus(jobId, "assembling");
-    const deckPath = await assembleDeck(jobId, plan, findings);
+    const deckData = await assembleDeck(jobId, plan, findings);
 
-    await updateJobStatus(jobId, "complete", { deckPath });
+    await updateJobStatus(jobId, "complete", { deckData });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await updateJobStatus(jobId, "failed", { error: message });

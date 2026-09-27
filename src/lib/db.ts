@@ -89,22 +89,30 @@ export async function createJob(jobId: string, topic: string): Promise<void> {
 export async function updateJobStatus(
   jobId: string,
   status: JobStatus,
-  fields: { error?: string; deckPath?: string; paperCount?: number } = {}
+  fields: { error?: string; deckData?: Buffer; paperCount?: number } = {}
 ): Promise<void> {
   await getPool().query(
     `UPDATE jobs
-     SET status = $2, error = $3, deck_path = COALESCE($4, deck_path),
+     SET status = $2, error = $3, deck_data = COALESCE($4, deck_data),
          paper_count = COALESCE($5, paper_count), updated_at = now()
      WHERE id = $1`,
-    [jobId, status, fields.error ?? null, fields.deckPath ?? null, fields.paperCount ?? null]
+    [jobId, status, fields.error ?? null, fields.deckData ?? null, fields.paperCount ?? null]
   );
 }
 
 export async function getJob(jobId: string) {
   const { rows } = await getPool().query(
-    `SELECT id, topic, status, error, deck_path, paper_count, created_at, updated_at
+    `SELECT id, topic, status, error, (deck_data IS NOT NULL) AS has_deck,
+            paper_count, created_at, updated_at
      FROM jobs WHERE id = $1`,
     [jobId]
   );
   return rows[0] ?? null;
+}
+
+/** Fetched separately from getJob so routine status polls never pull the
+ * deck bytes over the wire. */
+export async function getDeckData(jobId: string): Promise<Buffer | null> {
+  const { rows } = await getPool().query(`SELECT deck_data FROM jobs WHERE id = $1`, [jobId]);
+  return rows[0]?.deck_data ?? null;
 }

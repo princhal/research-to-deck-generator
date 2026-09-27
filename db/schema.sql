@@ -31,8 +31,11 @@ CREATE TABLE IF NOT EXISTS jobs (
   -- queued -> ingesting -> retrieving -> synthesizing -> assembling -> complete
   --   (or -> failed, with `error` set, from any state)
   error TEXT,
-  deck_path TEXT,
+  deck_data BYTEA,
   paper_count INT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE jobs DROP COLUMN IF EXISTS deck_path;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS deck_data BYTEA;

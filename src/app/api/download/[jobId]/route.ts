@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getJob } from "@/lib/db";
-import { getDeckDownloadUrl } from "@/lib/storage";
+import { getDeckData, getJob } from "@/lib/db";
 
 export async function GET(
   _request: Request,
@@ -9,10 +8,19 @@ export async function GET(
   const { jobId } = await params;
   const job = await getJob(jobId);
 
-  if (!job || job.status !== "complete" || !job.deck_path) {
+  if (!job || job.status !== "complete" || !job.has_deck) {
     return NextResponse.json({ error: "Deck not ready or job not found" }, { status: 404 });
   }
 
-  const url = await getDeckDownloadUrl(job.deck_path);
-  return NextResponse.redirect(url);
+  const buffer = await getDeckData(jobId);
+  if (!buffer) {
+    return NextResponse.json({ error: "Deck not ready or job not found" }, { status: 404 });
+  }
+
+  return new NextResponse(new Uint8Array(buffer), {
+    headers: {
+      "Content-Type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "Content-Disposition": `attachment; filename="${job.topic.replace(/[^a-z0-9]+/gi, "-")}.pptx"`,
+    },
+  });
 }
