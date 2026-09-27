@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { RetrievedChunk, SlidePlan } from "./types";
+import { uploadDeck } from "./storage";
 
 const execFileAsync = promisify(execFile);
 
@@ -12,7 +13,10 @@ const GENERATE_SCRIPT = path.join(PROJECT_ROOT, "scripts", "generate_deck.py");
 const BRAND_CONFIG = path.join(PROJECT_ROOT, "branding", "brand.json");
 
 /** Renders the slide plan to a .pptx file by shelling out to the Python
- * generate_deck.py script (python-pptx has no Node equivalent). */
+ * generate_deck.py script (python-pptx has no Node equivalent), then
+ * uploads it to R2 and returns the object key. The worker and the API
+ * don't share a filesystem, so the rendered file itself is discarded once
+ * it's in object storage. */
 export async function assembleDeck(
   jobId: string,
   plan: SlidePlan,
@@ -38,9 +42,9 @@ export async function assembleDeck(
 
   try {
     await execFileAsync("python3", [GENERATE_SCRIPT, inputPath, outputPath]);
+    return await uploadDeck(jobId, outputPath);
   } finally {
     await rm(tmpDir, { recursive: true, force: true });
+    await rm(outputPath, { force: true });
   }
-
-  return outputPath;
 }
